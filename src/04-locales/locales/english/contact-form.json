@@ -1,0 +1,8 @@
+{
+  "name-label": "Your name",
+  "name-placeholder": "E.g. didii",
+  "age-label": "Your age",
+  "age-placeholder": "E.g. 28",
+  "message-label": "Your message to us",
+  "message-placeholder": "Please refrain from using insults..."
+}
