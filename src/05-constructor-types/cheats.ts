@@ -6,9 +6,14 @@ type Listener<T> = {
   type: Type<T>;
   callback: (event: T) => void;
 };
-type Provider<T> = {
+
+class BaseRequest<T> {
+  __mock!: T;
+}
+type ResultOf<T extends BaseRequest<any>> = T extends BaseRequest<infer U> ? U : never;
+type Provider<T extends BaseRequest<any>> = {
   type: Type<T>;
-  provider: (request: T) => Promise<any>;
+  provider: (request: T) => Promise<ResultOf<T>>;
 };
 
 class EventHub {
@@ -18,7 +23,7 @@ class EventHub {
   public addListener<T extends object>(type: Type<T>, callback: (event: T) => void) {
     this.listeners.push({ type, callback });
   }
-  public addProvider<T>(type: Type<T>, provider: (request: T) => Promise<any>) {
+  public addProvider<TResult>(type: Type<BaseRequest<TResult>>, provider: (request: BaseRequest<TResult>) => Promise<TResult>) {
     this.providers.push({ type, provider });
   }
 
@@ -28,11 +33,12 @@ class EventHub {
       listener.callback(event);
     }
   }
-  public request<T extends object>(request: T) {
+  public async request<TResult>(request: BaseRequest<TResult>): Promise<TResult> {
     for (const provider of this.providers) {
       if (provider.type !== request.constructor) continue;
-      return provider.provider(request);
+      return await provider.provider(request) as TResult;
     }
+    throw Error('No provider found');
   }
 
 }
@@ -40,16 +46,15 @@ class EventHub {
 class LogEvent {
   public constructor(public msg: string) { }
 }
-class RequestConfirm {
+class RequestConfirm extends BaseRequest<'confirm' | 'cancel'> {
 }
 
 const hub = new EventHub();
 hub.addListener(LogEvent, (event) => console.log('[LogEvent]', event.msg));
-hub.addProvider(RequestConfirm, (req) => new Promise<void>((resolve, reject) => setTimeout(() => reject(), 1000)));
+hub.addProvider(RequestConfirm, (req) => new Promise<'confirm' | 'cancel'>((resolve, reject) => setTimeout(() => resolve('confirm'), 1000)));
 
 hub.emit(new LogEvent('alisudfghlias hfliausg flyasbbdfl asdghf'));
 hub.request(new RequestConfirm())
-  ?.then(() => console.log('Accepted'))
-  .catch(() => console.log('DENIED, SIT DOWN!'));
+  .then((a) => console.log(a));
 
 export { };
